@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Treasure-Go</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1d1d1d">
+  <link rel="icon" type="image/png" href="icon-512.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(() => console.log("✅ Service Worker enregistré"))
+          .catch(err => console.error("❌ Erreur Service Worker :", err));
+      });
+    }
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #app { display: flex; justify-content: center; align-items: center; height: 100%; background: black; color: white; font-family: sans-serif; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>🏴‍☠️ Treasure-Go PWA est en ligne</h1>
+    <p>Ajoutez cette page à votre écran d'accueil pour l'utiliser comme une application mobile.</p>
+  </div>
+</body>
+</html>
