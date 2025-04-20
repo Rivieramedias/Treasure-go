@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Treasure-Go - Joueur</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <audio id="foundSound" src="https://freesound.org/data/previews/341/341695_6261194-lq.mp3"></audio>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([43.695, 7.255], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const playerMarker = L.marker([43.695, 7.255], { title: "Vous" }).addTo(map);
+    const foundItems = new Set();
+    const sound = document.getElementById("foundSound");
+
+    function distance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // metres
+      const toRad = x => x * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    fetch("checkpoints.json")
+      .then(res => res.json())
+      .then(data => {
+        const items = data.map(item => {
+          return {
+            ...item,
+            marker: null,
+            shown: false
+          };
+        });
+
+        function updatePlayerPosition(pos) {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          const latlng = [lat, lon];
+          playerMarker.setLatLng(latlng);
+          map.setView(latlng, 16);
+
+          items.forEach(item => {
+            if (!item.shown) {
+              const d = distance(lat, lon, item.lat, item.lon);
+              if (d <= (item.radius || 50)) {
+                const icon = L.icon({
+                  iconUrl: item.image || `https://cdn-icons-png.flaticon.com/64/4365/4365931.png`,
+                  iconSize: [48, 48],
+                  iconAnchor: [24, 48]
+                });
+                const m = L.marker([item.lat, item.lon], { icon }).addTo(map);
+                m.bindPopup(`<b>${item.name}</b>`).openPopup();
+                sound.play();
+                item.marker = m;
+                item.shown = true;
+              }
+            }
+          });
+        }
+
+        function geoError(err) {
+          alert("Erreur GPS : " + err.message);
+        }
+
+        if (navigator.geolocation) {
+          navigator.geolocation.watchPosition(updatePlayerPosition, geoError, {
+            enableHighAccuracy: true,
+            maximumAge: 1000,
+            timeout: 10000
+          });
+        } else {
+          alert("La géolocalisation n'est pas supportée sur cet appareil.");
+        }
+      });
+  </script>
+</body>
+</html>
