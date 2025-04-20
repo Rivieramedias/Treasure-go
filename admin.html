@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin - Éditeur de Carte</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 500px; }
+    #form-container {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      width: 300px;
+    }
+    label, select, input, button {
+      display: block;
+      width: 100%;
+      margin-top: 5px;
+    }
+    #object-list {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🛠️ Admin Treasure-Go : Création d'objets</h1>
+  <div id="map"></div>
+  <div id="form-container" hidden>
+    <h3>Nouvel objet</h3>
+    <label for="obj-name">Nom :</label>
+    <input type="text" id="obj-name" required />
+
+    <label for="obj-type">Type :</label>
+    <select id="obj-type">
+      <option value="Coffre">Coffre</option>
+      <option value="Clé dorée">Clé dorée</option>
+      <option value="Pierre rouge">Pierre rouge</option>
+      <option value="Carte au trésor">Carte au trésor</option>
+      <option value="Épée">Épée</option>
+      <option value="Potion">Potion</option>
+      <option value="Diamant bleu">Diamant bleu</option>
+      <option value="Pièce d’or">Pièce d’or</option>
+      <option value="Couronne">Couronne</option>
+    </select>
+
+    <button id="add-object">Ajouter</button>
+  </div>
+  <button onclick="resetCheckpoints()">🗑️ Réinitialiser</button>
+  <div id="object-list">
+    <h3>📌 Objets placés :</h3>
+    <ul id="objects"></ul>
+    <button id="export-json">📤 Exporter JSON</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map('map').setView([43.695, 7.255], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let currentLatLng = null;
+    const checkpoints = [];
+
+    map.on('click', function(e) {
+      currentLatLng = e.latlng;
+      document.getElementById('form-container').hidden = false;
+      document.getElementById('obj-name').value = "";
+    });
+
+    document.getElementById('add-object').addEventListener('click', () => {
+      const name = document.getElementById('obj-name').value.trim();
+      const type = document.getElementById('obj-type').value;
+      if (!name || !currentLatLng) return;
+
+      const obj = {
+        name,
+        item: type,
+        lat: currentLatLng.lat,
+        lon: currentLatLng.lng
+      };
+      checkpoints.push(obj);
+
+      const li = document.createElement('li');
+      li.textContent = `${type} "${name}" à [${obj.lat.toFixed(5)}, ${obj.lon.toFixed(5)}]`;
+      document.getElementById('objects').appendChild(li);
+
+      L.marker(currentLatLng).addTo(map).bindPopup(`${type} : ${name}`);
+      document.getElementById('form-container').hidden = true;
+      document.getElementById('obj-name').value = "";
+    });
+
+    document.getElementById('export-json').addEventListener('click', () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(checkpoints, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "checkpoints.json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    });
+
+    function resetCheckpoints() {
+      if (confirm("Supprimer tous les objets ?")) {
+        checkpoints.length = 0;
+        document.getElementById('objects').innerHTML = "";
+        map.eachLayer(layer => {
+          if (layer instanceof L.Marker && !layer._icon.classList.contains("leaflet-control")) {
+            map.removeLayer(layer);
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>

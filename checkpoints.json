@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Coffre des collines",
+    "item": "Coffre",
+    "lat": 43.6955,
+    "lon": 7.2548
+  },
+  {
+    "name": "Cl\u00e9 d'argent",
+    "item": "Cl\u00e9 dor\u00e9e",
+    "lat": 43.696,
+    "lon": 7.256
+  },
+  {
+    "name": "Pierre oubli\u00e9e",
+    "item": "Pierre rouge",
+    "lat": 43.694,
+    "lon": 7.253
+  }
+]
