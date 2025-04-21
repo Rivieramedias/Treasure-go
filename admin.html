@@ -1,244 +1,102 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin Treasure-Go (avec rayon)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Carte</title>
   <style>
-    html, body, #map { height: 100%; margin: 0; font-family: Arial, sans-serif; }
-    #form {
-      position: fixed;
-      top: 20px;
-      left: 20px;
-      width: 320px;
-      max-width: 90%;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 12px;
-      border-radius: 10px;
-      z-index: 1000;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f4;
     }
-    #form input, #form button {
+    .form-container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      font-size: 14px;
+      margin-bottom: 6px;
       display: block;
+    }
+    input, select, button {
       width: 100%;
-      margin: 8px 0;
-      padding: 8px;
-      font-size: 15px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    #form button {
-      background: #000;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .icon-preview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      justify-content: center;
-      margin-top: 10px;
-    }
-    .icon-preview img {
-      width: 40px;
-      height: 40px;
-      border: 2px solid transparent;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .icon-preview img.selected {
-      border-color: #000;
-    }
-    #toggleBtn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 48px;
-      height: 48px;
-      border-radius: 24px;
-      background: #000;
-      color: white;
-      font-size: 20px;
-      border: none;
-      z-index: 2000;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      cursor: pointer;
-    }
-    #output {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      max-height: 150px;
-      overflow: auto;
-      background: #f4f4f4;
       padding: 10px;
-      font-family: monospace;
-      font-size: 12px;
-      border-top: 1px solid #ccc;
-      z-index: 500;
+      margin-bottom: 20px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
-    @media (max-width: 600px) {
-      #form {
-        width: calc(100% - 20px);
-        left: 10px;
-        right: 10px;
-        top: 10px;
-      }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .button-container {
+      text-align: center;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
-  <div id="form">
-    <input type="text" id="name" placeholder="Nom de l'objet" />
-    <input type="text" id="image" placeholder="🖼️ URL image perso (facultatif)" />
-    <input type="number" id="radius" placeholder="Rayon (en mètres)" />
-    <input type="text" id="address" placeholder="🔎 Adresse ou lieu" />
-    <button onclick="searchAddress()">📍 Rechercher + placer</button>
-    <div class="icon-preview" id="iconList"></div>
-    <button onclick="activatePlacement()">🎯 Placer sur la carte</button>
-    <button onclick="exportJSON()">📤 Exporter JSON</button>
-    <button onclick="reset()">🗑️ Réinitialiser</button>
+
+  <h1>Administration de la Carte</h1>
+
+  <div class="form-container">
+    <form id="admin-form">
+      <label for="nom_objet">Nom de l'objet :</label>
+      <input type="text" id="nom_objet" name="nom_objet" placeholder="Nom de l'objet" required>
+
+      <label for="texte_bulle">Texte de la bulle :</label>
+      <textarea id="texte_bulle" name="texte_bulle" placeholder="Entrez un texte pour la bulle..." maxlength="500" rows="4" required></textarea>
+
+      <label for="lien_bulle">Lien (URL) :</label>
+      <input type="url" id="lien_bulle" name="lien_bulle" placeholder="Lien vers une page ou ressource" required>
+
+      <label for="url_image_perso">URL image perso (facultatif) :</label>
+      <input type="url" id="url_image_perso" name="url_image_perso" placeholder="URL image personnelle (facultatif)">
+
+      <label for="rayon">Rayon (en mètres) :</label>
+      <input type="number" id="rayon" name="rayon" placeholder="Rayon en mètres" required>
+
+      <label for="adresse">Adresse ou lieu :</label>
+      <input type="text" id="adresse" name="adresse" placeholder="Adresse ou lieu" required>
+
+      <label for="son">Choisir un son :</label>
+      <select id="son" name="son">
+        <option value="son1">Son 1</option>
+        <option value="son2">Son 2</option>
+        <option value="son3">Son 3</option>
+        <option value="son4">Son 4</option>
+        <option value="son5">Son 5</option>
+      </select>
+
+      <label for="animation">Choisir une animation d'entrée :</label>
+      <select id="animation" name="animation">
+        <option value="fadeIn">Fade In</option>
+        <option value="zoomIn">Zoom In</option>
+        <option value="slideIn">Slide In</option>
+        <option value="bounceIn">Bounce In</option>
+        <option value="flipIn">Flip In</option>
+      </select>
+
+      <div class="button-container">
+        <button type="submit" id="rechercher_placer">Rechercher + Placer</button>
+        <button type="submit" id="placer_carte">Placer sur la carte</button>
+        <button type="button" id="export_json">Exporter JSON</button>
+        <button type="reset" id="reset_form">Réinitialiser</button>
+      </div>
+    </form>
   </div>
-  <div id="map"></div>
-  <button onclick="togglePanel()" id="toggleBtn">🧭</button>
-  <div id="output"></div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script>
-    const cdnIcons = {
-      coffre: "https://cdn-icons-png.flaticon.com/64/4365/4365931.png",
-      cle_doree: "https://cdn-icons-png.flaticon.com/64/3176/3176295.png",
-      pierre_rouge: "https://cdn-icons-png.flaticon.com/64/4042/4042357.png",
-      carte: "https://cdn-icons-png.flaticon.com/64/3541/3541885.png",
-      epee: "https://cdn-icons-png.flaticon.com/64/3468/3468091.png",
-      potion: "https://cdn-icons-png.flaticon.com/64/3063/3063829.png",
-      diamant: "https://cdn-icons-png.flaticon.com/64/951/951195.png",
-      piece_or: "https://cdn-icons-png.flaticon.com/64/4365/4365962.png",
-      couronne: "https://cdn-icons-png.flaticon.com/64/3534/3534254.png",
-      champagne: "https://cdn-icons-png.flaticon.com/64/2829/2829032.png",
-      bateau_pirate: "https://cdn-icons-png.flaticon.com/64/4365/4365913.png"
-    };
-    const icons = Object.keys(cdnIcons);
-    let selectedIcon = "coffre";
-
-    const iconList = document.getElementById("iconList");
-    icons.forEach(name => {
-      const img = document.createElement("img");
-      img.src = cdnIcons[name];
-      img.title = name;
-      img.onclick = () => {
-        document.querySelectorAll(".icon-preview img").forEach(i => i.classList.remove("selected"));
-        img.classList.add("selected");
-        selectedIcon = name;
-      };
-      if (name === "coffre") img.classList.add("selected");
-      iconList.appendChild(img);
-    });
-
-    const map = L.map('map').setView([43.695, 7.255], 14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    const points = [];
-    let placing = false;
-
-    function activatePlacement() {
-      placing = true;
-      alert("Clique sur la carte pour ajouter l'objet");
-    }
-
-    map.on("click", (e) => {
-      if (!placing) return;
-      const name = document.getElementById("name").value.trim();
-      const image = document.getElementById("image").value.trim();
-      const radius = parseInt(document.getElementById("radius").value.trim()) || 50;
-      if (!name) return alert("Donne un nom à ton objet !");
-      const icon = L.icon({
-        iconUrl: cdnIcons[selectedIcon],
-        iconSize: [48, 48],
-        iconAnchor: [24, 48]
-      });
-      const marker = L.marker(e.latlng, { draggable: true, icon }).addTo(map);
-      const circle = L.circle(e.latlng, { radius, color: 'blue', fillOpacity: 0.1 }).addTo(map);
-
-      marker.bindPopup(`<b>${name}</b><br>${selectedIcon}`).openPopup();
-      const obj = {
-        name,
-        item: selectedIcon,
-        image,
-        radius,
-        lat: e.latlng.lat,
-        lon: e.latlng.lng,
-        marker,
-        circle
-      };
-      marker.on("dragend", () => {
-        const pos = marker.getLatLng();
-        obj.lat = pos.lat;
-        obj.lon = pos.lng;
-        obj.circle.setLatLng(pos);
-        updateOutput();
-      });
-      points.push(obj);
-      updateOutput();
-      placing = false;
-    });
-
-    function updateOutput() {
-      const out = document.getElementById("output");
-      const clean = points.map(p => ({
-        name: p.name,
-        item: p.item,
-        image: p.image || "",
-        lat: p.lat,
-        lon: p.lon,
-        radius: p.radius
-      }));
-      out.textContent = JSON.stringify(clean, null, 2);
-    }
-
-    function exportJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(document.getElementById("output").textContent);
-      const dl = document.createElement("a");
-      dl.setAttribute("href", dataStr);
-      dl.setAttribute("download", "checkpoints.json");
-      dl.click();
-    }
-
-    function reset() {
-      location.reload();
-    }
-
-    function searchAddress() {
-      const address = document.getElementById("address").value;
-      if (!address.trim()) return;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if (data.length === 0) {
-            alert("Adresse non trouvée.");
-            return;
-          }
-          const loc = data[0];
-          const latlng = L.latLng(loc.lat, loc.lon);
-          map.setView(latlng, 17);
-          map.fire("click", { latlng });
-        })
-        .catch(err => {
-          console.error("Erreur API adresse :", err);
-          alert("Erreur lors de la recherche d'adresse.");
-        });
-    }
-
-    function togglePanel() {
-      const form = document.getElementById("form");
-      form.style.display = form.style.display === "none" ? "block" : "none";
-    }
-  </script>
 </body>
 </html>
