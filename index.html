@@ -15,6 +15,11 @@
       height: 100vh;
       width: 100%;
     }
+
+    /* ✨ Ombre stylée pour l'icône détective */
+    .detective-icon {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+    }
   </style>
 </head>
 <body>
@@ -25,22 +30,20 @@
     document.addEventListener("DOMContentLoaded", function () {
       const map = L.map('map').setView([43.7, 7.25], 13);
 
-      // Fond de carte
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(map);
 
-      // Icône détective en 96x96 bien centrée
       const detectiveIcon = L.icon({
         iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
-        iconSize: [96, 96],
-        iconAnchor: [48, 96], // centré et ancré en bas
+        iconSize: [72, 100],
+        iconAnchor: [36, 100],
+        className: 'detective-icon' // 🕶️ Classe custom pour effet visuel
       });
 
       let playerMarker;
 
-      // Géolocalisation en direct
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(position => {
           const lat = position.coords.latitude;
