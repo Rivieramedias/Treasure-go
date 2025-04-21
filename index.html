@@ -16,9 +16,19 @@
       width: 100%;
     }
 
-    /* ✨ Ombre stylée pour l'icône détective */
     .detective-icon {
       filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+    }
+
+    .player-label {
+      background: white;
+      color: #222;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 6px;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+      font-size: 15px;
+      line-height: 1.4;
     }
   </style>
 </head>
@@ -39,7 +49,7 @@
         iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
         iconSize: [72, 100],
         iconAnchor: [36, 100],
-        className: 'detective-icon' // 🕶️ Classe custom pour effet visuel
+        className: 'detective-icon'
       });
 
       let playerMarker;
@@ -53,8 +63,12 @@
             playerMarker.setLatLng([lat, lon]);
           } else {
             playerMarker = L.marker([lat, lon], { icon: detectiveIcon }).addTo(map)
-              .bindPopup("Ma position 🧭")
-              .openPopup();
+              .bindTooltip("🧭 MA POSITION", {
+                permanent: true,
+                direction: 'right',
+                offset: [12, 0],
+                className: 'player-label'
+              });
             map.setView([lat, lon], 16);
           }
         }, error => {
