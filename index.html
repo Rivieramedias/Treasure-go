@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Treasure-Go – Carte</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     html, body {
       margin: 0;
@@ -26,16 +23,46 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-      const map = L.map('map').setView([43.7, 7.25], 12);
+      const map = L.map('map').setView([43.7, 7.25], 13);
 
+      // Tuiles OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(map);
 
-      L.marker([43.7, 7.25]).addTo(map)
-        .bindPopup('Bienvenue sur Treasure-Go !')
-        .openPopup();
+      // Icône personnalisée (détective)
+      const detectiveIcon = L.icon({
+        iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
+        iconSize: [48, 48],
+        iconAnchor: [24, 48], // le bas de l’icône est le point d’ancrage
+      });
+
+      let playerMarker;
+
+      // Géolocalisation en direct
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          if (playerMarker) {
+            playerMarker.setLatLng([lat, lon]);
+          } else {
+            playerMarker = L.marker([lat, lon], { icon: detectiveIcon }).addTo(map)
+              .bindPopup("Vous êtes ici 🕵️");
+            map.setView([lat, lon], 16);
+          }
+        }, error => {
+          console.error("Erreur de géolocalisation :", error);
+          alert("Impossible d'accéder à votre position.");
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 1000
+        });
+      } else {
+        alert("La géolocalisation n’est pas supportée par ce navigateur.");
+      }
     });
   </script>
 </body>
