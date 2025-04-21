@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <base href="/Treasure-go/">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Treasure-Go – Carte</title>
   <link
@@ -26,16 +27,12 @@
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
     window.addEventListener('load', function () {
-      // Initialisation de la carte centrée sur la Côte d'Azur
       const map = L.map('map').setView([43.7, 7.25], 12);
-
-      // Tuiles OpenStreetMap
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 19
       }).addTo(map);
 
-      // Test : Marqueur exemple
       L.marker([43.7, 7.25]).addTo(map)
         .bindPopup('Bienvenue sur Treasure-Go !')
         .openPopup();
