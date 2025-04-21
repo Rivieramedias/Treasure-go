@@ -31,22 +31,20 @@
         maxZoom: 19
       }).addTo(map);
 
-      // Icône détective : à remplacer par ton URL si uploadée
+      // Icône du détective (128x128)
       const detectiveIcon = L.icon({
-      iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
-        iconSize: [48, 48],
-        iconAnchor: [24, 48],
+        iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
+        iconSize: [64, 64],
+        iconAnchor: [32, 64], // base centrée
       });
 
       let playerMarker;
 
-      // Géolocalisation live
+      // Géolocalisation en direct
       if (navigator.geolocation) {
         navigator.geolocation.watchPosition(position => {
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
-
-          console.log("Position actuelle :", lat, lon);
 
           if (playerMarker) {
             playerMarker.setLatLng([lat, lon]);
