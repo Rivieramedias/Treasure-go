@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Treasure-Go – Sélection Avatar</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #avatar-select {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: white;
+      padding: 6px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+
+    .avatar-icon {
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
+      position: relative;
+    }
+
+    .avatar-icon::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100px;
+      height: 100px;
+      background: rgba(0, 123, 255, 0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 2s ease-out infinite;
+      z-index: -1;
+    }
+
+    @keyframes pulse {
+      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.8; }
+      70% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    .player-label {
+      background: transparent;
+      color: #000;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 0;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      line-height: 1.2;
+      text-align: center;
+    }
+
+    .player-label .emoji {
+      font-size: 22px;
+      font-weight: bold;
+      color: #000;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    select {
+      font-size: 16px;
+      padding: 8px 12px;
+      width: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="avatar-select">
+    <label for="avatar">Avatar :</label>
+    <select id="avatar">
+      <option value="https://rivieramedias.github.io/Treasure-go/explorer_icon.png">🧢 Explorateur</option>
+      <option value="https://rivieramedias.github.io/Treasure-go/detective_icon.png">🕵️ Détective</option>
+      <option value="https://rivieramedias.github.io/Treasure-go/blonde_detective_icon.png">👱‍♀️ Détective blonde</option>
+      <option value="https://rivieramedias.github.io/Treasure-go/explorer_icon.png">👒 Exploratrice</option>
+      <option value="https://rivieramedias.github.io/Treasure-go/detective_icon.png">🕵️‍♀️ Détective femme</option>
+      <option value="https://rivieramedias.github.io/Treasure-go/skateboarder_icon.png">🧑‍🦰 Ado Skateboarder</option>
+    </select>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    let map;
+    let playerMarker;
+    let currentIconUrl = 'https://rivieramedias.github.io/Treasure-go/explorer_icon.png';
+
+    const updateMarkerIcon = () => {
+      const avatar = document.getElementById('avatar').value;
+      currentIconUrl = avatar;
+
+      if (playerMarker) {
+        const newIcon = L.icon({
+          iconUrl: currentIconUrl,
+          iconSize: [64, 90],
+          iconAnchor: [32, 90],
+          className: 'avatar-icon'
+        });
+        playerMarker.setIcon(newIcon);
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+      map = L.map('map').setView([43.7, 7.25], 13);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      document.getElementById('avatar').addEventListener('change', updateMarkerIcon);
+
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          const icon = L.icon({
+            iconUrl: currentIconUrl,
+            iconSize: [64, 90],
+            iconAnchor: [32, 90],
+            className: 'avatar-icon'
+          });
+
+          if (playerMarker) {
+            playerMarker.setLatLng([lat, lon]);
+          } else {
+            playerMarker = L.marker([lat, lon], { icon: icon }).addTo(map)
+              .bindTooltip("<div class='tooltip-inner'><div class='emoji'>🧭</div><div>Ma position</div></div>", {
+                permanent: true,
+                direction: 'right',
+                offset: [30, -30],
+                className: 'player-label'
+              });
+            map.setView([lat, lon], 16);
+          }
+        }, error => {
+          alert("Erreur de géolocalisation : " + error.message);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 1000
+        });
+      } else {
+        alert("La géolocalisation n’est pas supportée par ce navigateur.");
+      }
+    });
+  </script>
+</body>
+</html>
