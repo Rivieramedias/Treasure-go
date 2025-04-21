@@ -31,11 +31,11 @@
         maxZoom: 19
       }).addTo(map);
 
-      // Icône du détective (128x128)
+      // Icône détective en 96x96 bien centrée
       const detectiveIcon = L.icon({
         iconUrl: 'https://rivieramedias.github.io/Treasure-go/detective_icon.png',
-        iconSize: [64, 64],
-        iconAnchor: [32, 64], // base centrée
+        iconSize: [96, 96],
+        iconAnchor: [48, 96], // centré et ancré en bas
       });
 
       let playerMarker;
