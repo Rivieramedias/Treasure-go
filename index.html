@@ -49,11 +49,16 @@
   <meta name="theme-color" content="#000000" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body, #map {
+    html, body {
       height: 100%;
       margin: 0;
       font-family: Arial, sans-serif;
       overflow: hidden;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+      display: block; /* Assurer que la carte est visible dès le départ */
     }
     #info {
       position: fixed;
@@ -105,17 +110,18 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // Initialiser la carte
+    // Initialiser la carte immédiatement, car #map est visible
+    console.log("Début de l'initialisation de la carte sur index.html");
     const map = L.map('map', { zoomControl: true }).setView([43.695, 7.255], 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // Forcer Leaflet à recalculer les dimensions avec un délai plus long
+    // Forcer Leaflet à recalculer les dimensions
     setTimeout(() => {
       map.invalidateSize();
       console.log("Carte initialisée sur index.html");
-    }, 1000);
+    }, 2000);
 
     let userMarker;
     const info = document.getElementById('info');
@@ -142,6 +148,7 @@
         return res.json();
       })
       .then(checkpoints => {
+        console.log("Checkpoints chargés:", checkpoints);
         checkpoints.forEach(point => {
           const icon = L.icon({
             iconUrl: cdnIcons[point.item] || cdnIcons.coffre,
@@ -199,6 +206,7 @@
           userMarker.setLatLng(latlng);
         }
         map.setView(latlng, 14);
+        console.log("Position utilisateur mise à jour:", userLat, userLon);
       }, err => {
         console.error('Erreur de géolocalisation:', err);
         let errorMessage = 'Géolocalisation non disponible.';
@@ -227,7 +235,8 @@
       info.style.display = info.style.display === "none" ? "block" : "none";
     }
 
-    // Enregistrement du Service Worker pour la PWA
+    // Enregistrement du Service Worker pour la PWA (désactivé temporairement pour tester)
+    /*
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/Treasure-go/sw.js')
@@ -239,6 +248,7 @@
           });
       });
     }
+    */
   </script>
 </body>
 </html>
