@@ -18,7 +18,7 @@
       border-radius: 10px;
       z-index: 1000;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      opacity: 0; /* Pour l'animation d'entrée */
+      opacity: 1; /* Assurer que le formulaire est visible par défaut */
       transition: all 1s ease-in-out;
     }
     #form input, #form button, #form select {
@@ -122,7 +122,7 @@
   </style>
 </head>
 <body>
-  <div id="form" style="transform: translateY(50px);">
+  <div id="form">
     <input type="text" id="name" placeholder="Nom de l'objet (texte bulle)" />
     <input type="text" id="link" placeholder="🔗 Lien (URL, facultatif)" />
     <input type="text" id="sound" placeholder="🎵 URL du son (facultatif)" />
@@ -187,11 +187,12 @@
     let placing = false;
 
     // Appliquer l'animation d'entrée au chargement
-    window.onload = function() {
+    document.addEventListener("DOMContentLoaded", function() {
       const animation = document.getElementById('entry-animation').value;
       const form = document.getElementById('form');
+      form.style.display = "block"; // Assurer que le formulaire est visible
       form.classList.add(animation);
-    };
+    });
 
     function activatePlacement() {
       placing = true;
@@ -317,10 +318,14 @@
 
     function togglePanel() {
       const form = document.getElementById("form");
-      form.style.display = form.style.display === "none" ? "block" : "none";
-      if (form.style.display === "block") {
+      const isHidden = form.style.display === "none";
+      form.style.display = isHidden ? "block" : "none";
+      if (isHidden) {
         const animation = document.getElementById('entry-animation').value;
-        form.classList.add(animation);
+        form.style.opacity = "0"; // Réinitialiser l'opacité pour l'animation
+        setTimeout(() => {
+          form.classList.add(animation);
+        }, 10); // Petit délai pour s'assurer que l'animation se déclenche
       }
     }
   </script>
