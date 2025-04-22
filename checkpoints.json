@@ -1,0 +1,28 @@
+[
+  {
+    "name": "Point 1",
+    "bubbleText": "Bienvenue au Point 1 ! Regarde cette vidéo.",
+    "link": "https://ma-petite-boutique.com/",
+    "sound": "",
+    "item": "potion",
+    "image": "",
+    "lat": 43.691987286370454,
+    "lon": 7.2314071655527345,
+    "radius": 1000,
+    "video": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "imagePopup": "https://via.placeholder.com/400x300.png?text=Point+1+Image"
+  },
+  {
+    "name": "Point 2",
+    "bubbleText": "Tu es au Point 2 ! Voici une image.",
+    "link": "",
+    "sound": "",
+    "item": "coffre",
+    "image": "",
+    "lat": 43.695,
+    "lon": 7.255,
+    "radius": 500,
+    "video": "",
+    "imagePopup": "https://via.placeholder.com/400x300.png?text=Point+2+Image"
+  }
+]
