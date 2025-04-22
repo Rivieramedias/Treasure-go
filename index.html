@@ -52,6 +52,7 @@
     html, body, #map {
       height: 100%;
       margin: 0;
+      padding: 0; /* Ajout pour éviter tout espace */
       font-family: Arial, sans-serif;
       overflow: hidden;
     }
@@ -64,6 +65,7 @@
       border-radius: 5px;
       z-index: 1000;
       font-size: 14px;
+      display: block; /* État initial explicite */
     }
     #toggleBtn {
       position: fixed;
@@ -76,9 +78,10 @@
       color: white;
       font-size: 20px;
       border: none;
-      z-index: 2000;
+      z-index: 2000; /* Assure que le bouton est au premier plan */
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       cursor: pointer;
+      touch-action: manipulation; /* Optimisation pour les interactions tactiles */
     }
     .leaflet-popup-content-wrapper {
       background: #fff;
@@ -120,8 +123,14 @@
       cursor: pointer;
       font-size: 16px;
     }
+    /* Masquer le script Cloudflare et ses éléments associés */
     body > script:last-of-type {
       display: none !important;
+    }
+    body > iframe {
+      display: none !important; /* Cible spécifiquement l'iframe de Cloudflare */
+      height: 0 !important;
+      width: 0 !important;
     }
     body > *:last-child:not(#map):not(#toggleBtn):not(#info):not(#imageModal) {
       display: none !important;
@@ -131,7 +140,7 @@
 <body>
   <div id="info">Chargement...</div>
   <div id="map"></div>
-  <button onclick="toggleInfo()" id="toggleBtn">🧭</button>
+  <button id="toggleBtn">🧭</button>
 
   <!-- Fenêtre modale pour afficher l'image -->
   <div id="imageModal">
@@ -158,6 +167,7 @@
     const info = document.getElementById('info');
     const imageModal = document.getElementById('imageModal');
     const modalImage = document.getElementById('modalImage');
+    const toggleBtn = document.getElementById('toggleBtn');
 
     // Tableaux pour suivre les points où une vidéo ou une image a déjà été ouverte
     const videoPlayed = new Set();
@@ -174,6 +184,25 @@
       imageModal.style.display = "none";
       modalImage.src = "";
     }
+
+    // Fonction pour afficher/masquer la div #info
+    function toggleInfo() {
+      console.log("toggleInfo() appelé. État actuel de display:", info.style.display);
+      info.style.display = info.style.display === "none" ? "block" : "none";
+      console.log("Nouvel état de display:", info.style.display);
+    }
+
+    // Ajouter les écouteurs d'événements pour click et touchstart
+    toggleBtn.addEventListener("click", (event) => {
+      console.log("Clic sur la boussole détecté:", event);
+      toggleInfo();
+    });
+
+    toggleBtn.addEventListener("touchstart", (event) => {
+      console.log("Touchstart sur la boussole détecté:", event);
+      event.preventDefault(); // Évite les comportements par défaut (comme le scroll)
+      toggleInfo();
+    });
 
     // Charger les checkpoints depuis checkpoints.json
     console.log("Tentative de chargement de checkpoints.json...");
@@ -293,10 +322,6 @@
         console.error('Erreur lors du chargement des checkpoints:', err);
         info.textContent = 'Erreur lors du chargement des objets : ' + err.message + '. Vérifiez votre connexion ou si le fichier checkpoints.json est disponible.';
       });
-
-    function toggleInfo() {
-      info.style.display = info.style.display === "none" ? "block" : "none";
-    }
 
     // Désenregistrer les anciens service workers et enregistrer le nouveau
     if ('serviceWorker' in navigator) {
