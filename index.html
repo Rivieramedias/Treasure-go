@@ -1,0 +1,155 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Treasure-Go - Chasse au trésor</title>
+  <!-- Lien vers le manifeste pour la PWA -->
+  <link rel="manifest" href="/Treasure-go/manifest.json" />
+  <!-- Meta pour le thème de la PWA -->
+  <meta name="theme-color" content="#000000" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      gap: 5px;
+    }
+    .cell {
+      width: 60px;
+      height: 60px;
+      background-color: #ccc;
+      border: 2px solid #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .cell.revealed {
+      background-color: #fff;
+    }
+    .cell.treasure {
+      background-color: gold;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chasse au trésor</h1>
+  <div id="grid"></div>
+  <div id="message"></div>
+
+  <script>
+    const GRID_SIZE = 5;
+    const TOTAL_CELLS = GRID_SIZE * GRID_SIZE;
+    const grid = document.getElementById('grid');
+    const message = document.getElementById('message');
+    let treasurePosition;
+
+    // Initialiser la grille
+    function initializeGrid() {
+      grid.innerHTML = '';
+      treasurePosition = Math.floor(Math.random() * TOTAL_CELLS);
+      for (let i = 0; i < TOTAL_CELLS; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.dataset.index = i;
+        cell.addEventListener('click', handleCellClick);
+        grid.appendChild(cell);
+      }
+      message.textContent = 'Trouve le trésor !';
+    }
+
+    // Gérer le clic sur une case
+    function handleCellClick(e) {
+      const cell = e.target;
+      const index = parseInt(cell.dataset.index);
+      cell.classList.add('revealed');
+
+      if (index === treasurePosition) {
+        cell.classList.add('treasure');
+        message.textContent = 'Félicitations ! Tu as trouvé le trésor !';
+        setTimeout(() => {
+          initializeGrid();
+        }, 2000);
+      } else {
+        message.textContent = 'Pas de trésor ici. Continue !';
+      }
+    }
+
+    // Lancer le jeu
+    initializeGrid();
+
+    // Enregistrement du Service Worker pour la PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/Treasure-go/sw.js')
+          .then(registration => {
+            console.log('Service Worker enregistré avec succès:', registration);
+          })
+          .catch(err => {
+            console.log('Erreur lors de l\'enregistrement du Service Worker:', err);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
