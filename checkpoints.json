@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Hello",
+    "link": "https://audio-guides.eu/",
+    "sound": "https://audio-guides.eu/treasure/sons/jump.mp3",
+    "item": "pierre_rouge",
+    "image": "",
+    "lat": 43.697482328012,
+    "lon": 7.276377081871034,
+    "radius": 50
+  }
+]
