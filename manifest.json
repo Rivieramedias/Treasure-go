@@ -1,6 +1,6 @@
 {
   "name": "Treasure-Go Admin",
-  "short_name": "Treasure-Go",
+  "short_name": "TreasureGo-v2",  /* Changé pour forcer une nouvelle invite */
   "description": "Interface d'administration pour Treasure-Go, une chasse au trésor interactive.",
   "start_url": "/Treasure-go/admin.html",
   "display": "standalone",
