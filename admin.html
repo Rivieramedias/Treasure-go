@@ -1,0 +1,647 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Treasure-Go (avec rayon)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Lien vers le manifeste pour la PWA -->
+  <link rel="manifest" href="/Treasure-go/manifest.json" />
+  <!-- Meta pour le thème de la PWA -->
+  <meta name="theme-color" content="#000000" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    #form, #toggleBtn, #output, #objectList {
+      display: none;
+    }
+    #form {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      max-width: 90%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 10px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      opacity: 1;
+      transition: all 1s ease-in-out;
+    }
+    #form input, #form button, #form select {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 8px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    #form button {
+      background: #000;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .icon-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .icon-preview img {
+      width: 40px;
+      height: 40px;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .icon-preview img.selected {
+      border-color: #000;
+    }
+    #toggleBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+      background: #000;
+      color: white;
+      font-size: 20px;
+      border: none;
+      z-index: 2000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+    #output {
+      position: fixed;
+      bottom: 200px;
+      left: 0;
+      right: 0;
+      max-height: 100px;
+      overflow: auto;
+      background: #f4f4f4;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      border-top: 1px solid #ccc;
+      z-index: 500;
+    }
+    #objectList {
+      position: fixed;
+      bottom: 0;
+      left: 20px;
+      width: 320px;
+      max-width: 90%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 10px 10px 0 0;
+      z-index: 1000;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    #objectList h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+    }
+    #objectList ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    #objectList li {
+      padding: 5px 0;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #objectList button {
+      background: #ff4444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #objectList button:hover {
+      background: #cc0000;
+    }
+    .leaflet-popup-content-wrapper {
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 10px;
+      max-width: 200px;
+      text-align: center;
+    }
+    .leaflet-popup-content-wrapper a {
+      color: #1a73e8;
+      text-decoration: underline;
+    }
+    .fade-in {
+      opacity: 1;
+    }
+    .slide-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .zoom-in {
+      opacity: 1;
+      transform: scale(1);
+    }
+    .bounce-in {
+      animation: bounceIn 1s ease-in-out;
+    }
+    .rotate-in {
+      animation: rotateIn 1s ease-in-out;
+    }
+    .scale-up {
+      animation: scaleUp 1s ease-in-out;
+    }
+    @keyframes bounceIn {
+      0% { transform: translateY(-100px); opacity: 0; }
+      60% { transform: translateY(20px); opacity: 1; }
+      80% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+    @keyframes rotateIn {
+      0% { transform: rotate(-180deg); opacity: 0; }
+      100% { transform: rotate(0deg); opacity: 1; }
+    }
+    @keyframes scaleUp {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @media (max-width: 600px) {
+      #form, #objectList {
+        width: calc(100% - 20px);
+        left: 10px;
+        right: 10px;
+      }
+      #form {
+        top: 10px;
+      }
+      #output {
+        bottom: 150px;
+      }
+    }
+    #passwordPrompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+    }
+    #passwordPrompt div {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    #passwordPrompt input {
+      padding: 8px;
+      margin: 10px 0;
+      width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #passwordPrompt button {
+      padding: 8px 16px;
+      background: #000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #passwordPrompt p {
+      color: red;
+      margin: 5px 0 0 0;
+      display: none;
+    }
+    /* Masquer tout contenu parasite en bas de la page */
+    body > script:last-of-type {
+      display: none !important;
+    }
+    body > *:last-child:not(#mapContainer):not(#toggleBtn):not(#output):not(#objectList):not(#form):not(#passwordPrompt) {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="passwordPrompt">
+    <div>
+      <h2>Connexion Admin</h2>
+      <input type="password" id="passwordInput" placeholder="Entrez le mot de passe" />
+      <button id="validateButton">Valider</button>
+      <p id="errorMessage">Mot de passe incorrect !</p>
+    </div>
+  </div>
+
+  <div id="form">
+    <input type="text" id="name" placeholder="Nom de l'objet" />
+    <input type="text" id="bubble-text" placeholder="💬 Texte de la bulle" />
+    <input type="text" id="link" placeholder="🔗 Lien (URL, facultatif)" />
+    <input type="text" id="sound" placeholder="🎵 URL du son (facultatif)" />
+    <input type="text" id="image" placeholder="🖼️ URL image perso (facultatif)" />
+    <input type="number" id="radius" placeholder="Rayon (en mètres)" />
+    <input type="text" id="video" placeholder="🎥 URL vidéo (facultatif)" />
+    <input type="text" id="imagePopup" placeholder="🖼️ URL image pop-up (facultatif)" />
+    <input type="text" id="address" placeholder="🔎 Adresse ou lieu" />
+    <button onclick="searchAddress()">📍 Rechercher + placer</button>
+    <div class="icon-preview" id="iconList"></div>
+    <button onclick="activatePlacement()">🎯 Placer sur la carte</button>
+    <label for="entry-animation">Animation d'entrée</label>
+    <select id="entry-animation">
+      <option value="fade-in">Fade In</option>
+      <option value="slide-in">Slide In</option>
+      <option value="zoom-in">Zoom In</option>
+      <option value="bounce-in">Bounce In</option>
+      <option value="rotate-in">Rotate In</option>
+      <option value="scale-up">Scale Up</option>
+    </select>
+    <button onclick="exportJSON()">📤 Exporter JSON</button>
+    <button onclick="reset()">🗑️ Réinitialiser</button>
+  </div>
+  <div id="objectList">
+    <h3>Objets ajoutés</h3>
+    <ul id="objectListItems"></ul>
+  </div>
+  <div id="mapContainer"></div>
+  <button onclick="togglePanel()" id="toggleBtn">🧭</button>
+  <div id="output"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/Treasure-go/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log("DOM chargé, initialisation de la boîte de dialogue.");
+
+      const ADMIN_PASSWORD = "admin123";
+      let map;
+      let placing = false;
+      const points = [];
+
+      // Vérifier que Leaflet est chargé
+      if (typeof L === 'undefined') {
+        console.error("Leaflet n'est pas chargé ! Vérifiez le chargement de la bibliothèque.");
+      } else {
+        console.log("Leaflet est chargé correctement.");
+      }
+
+      // Vérifier que les éléments du DOM sont accessibles
+      const passwordInput = document.getElementById("passwordInput");
+      const errorMessage = document.getElementById("errorMessage");
+      const prompt = document.getElementById("passwordPrompt");
+      const validateButton = document.getElementById("validateButton");
+
+      if (!passwordInput || !errorMessage || !prompt || !validateButton) {
+        console.error("Erreur : Certains éléments du DOM ne sont pas accessibles.", {
+          passwordInput,
+          errorMessage,
+          prompt,
+          validateButton
+        });
+        return;
+      } else {
+        console.log("Éléments du DOM pour la boîte de dialogue accessibles.");
+      }
+
+      function checkPassword() {
+        console.log("checkPassword() appelé.");
+        const input = passwordInput.value;
+        console.log("Valeur de l'input:", input);
+
+        if (input === ADMIN_PASSWORD) {
+          console.log("Mot de passe correct, affichage de l'interface");
+          prompt.style.display = "none";
+          document.getElementById("form").style.display = "block";
+          document.getElementById("objectList").style.display = "block";
+          document.getElementById("toggleBtn").style.display = "block";
+          document.getElementById("output").style.display = "block";
+
+          // Créer dynamiquement le conteneur de la carte
+          const mapContainer = document.getElementById("mapContainer");
+          const mapDiv = document.createElement("div");
+          mapDiv.id = "map";
+          mapContainer.appendChild(mapDiv);
+
+          // Initialiser la carte après avoir ajouté le conteneur
+          initializeMap();
+
+          const animation = document.getElementById('entry-animation').value;
+          const form = document.getElementById('form');
+          form.classList.add(animation);
+        } else {
+          console.log("Mot de passe incorrect");
+          errorMessage.style.display = "block";
+          passwordInput.value = "";
+        }
+      }
+
+      // Ajouter les écouteurs d'événements
+      validateButton.addEventListener("click", () => {
+        console.log("Bouton Valider cliqué.");
+        checkPassword();
+      });
+
+      passwordInput.addEventListener("keypress", (event) => {
+        console.log("Touche pressée:", event.key);
+        if (event.key === "Enter") {
+          console.log("Touche Entrée détectée.");
+          checkPassword();
+        }
+      });
+
+      function initializeMap() {
+        console.log("Début de l'initialisation de la carte sur admin.html");
+        map = L.map('map', { zoomControl: true }).setView([43.695, 7.255], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(map);
+        // Forcer Leaflet à recalculer les dimensions
+        setTimeout(() => {
+          map.invalidateSize();
+          console.log("Carte initialisée sur admin.html");
+        }, 2000);
+
+        // Attacher l'événement de clic à la carte après son initialisation
+        map.on("click", (e) => {
+          if (!placing) return;
+          const name = document.getElementById("name").value.trim();
+          const bubbleText = document.getElementById("bubble-text").value.trim();
+          const link = document.getElementById("link").value.trim();
+          const sound = document.getElementById("sound").value.trim();
+          const image = document.getElementById("image").value.trim();
+          const radius = parseInt(document.getElementById("radius").value.trim()) || 50;
+          const video = document.getElementById("video").value.trim();
+          const imagePopup = document.getElementById("imagePopup").value.trim();
+          if (!name) return alert("Donne un nom à ton objet !");
+          const icon = L.icon({
+            iconUrl: cdnIcons[selectedIcon],
+            iconSize: [48, 48],
+            iconAnchor: [24, 48]
+          });
+          const marker = L.marker(e.latlng, { draggable: true, icon }).addTo(map);
+          const circle = L.circle(e.latlng, { 
+            radius, 
+            color: 'transparent', // Pas de bordure extérieure
+            fillColor: 'blue', // Remplissage bleu
+            fillOpacity: 0.05 // Remplissage plus discret
+          }).addTo(map);
+
+          // Vérifier les valeurs de bubbleText et link
+          console.log("Création de la bulle pour l'objet:", { name, bubbleText, link, video, imagePopup });
+          const bubbleContent = `${bubbleText || name}${link ? `<br><a href="${link}" target="_blank">Cliquez ici</a>` : ''}`;
+          const popup = L.popup({
+            closeButton: false,
+            autoClose: false,
+            closeOnClick: false,
+            offset: [0, -60] // Décalage pour placer la bulle au-dessus de l'icône
+          }).setContent(bubbleContent);
+
+          marker.bindPopup(popup);
+          marker.bindPopup(`<b>${name}</b><br>${selectedIcon}`).openPopup();
+          const obj = {
+            name,
+            bubbleText: bubbleText || name,
+            link,
+            sound,
+            item: selectedIcon,
+            image,
+            radius,
+            video,
+            imagePopup,
+            lat: e.latlng.lat,
+            lon: e.latlng.lng,
+            marker,
+            circle,
+            popup
+          };
+
+          marker.on("click", () => {
+            if (sound) {
+              const audio = new Audio(sound);
+              audio.play().catch(err => console.log('Erreur lecture audio:', err));
+            }
+            marker.openPopup();
+            setTimeout(() => {
+              marker.closePopup();
+            }, 5000);
+          });
+
+          marker.on("dragend", () => {
+            const pos = marker.getLatLng();
+            obj.lat = pos.lat;
+            obj.lon = pos.lng;
+            obj.circle.setLatLng(pos);
+            // Mettre à jour la position du popup
+            obj.popup.setLatLng(pos);
+            updateOutput();
+            updateObjectList();
+          });
+
+          points.push(obj);
+          updateOutput();
+          updateObjectList();
+          placing = false;
+        });
+      }
+
+      let selectedIcon = "coffre";
+      const iconList = document.getElementById("iconList");
+      Object.keys(cdnIcons).forEach(name => {
+        const img = document.createElement("img");
+        img.src = cdnIcons[name];
+        img.title = name;
+        img.onclick = () => {
+          document.querySelectorAll(".icon-preview img").forEach(i => i.classList.remove("selected"));
+          img.classList.add("selected");
+          selectedIcon = name;
+        };
+        if (name === "coffre") img.classList.add("selected");
+        iconList.appendChild(img);
+      });
+
+      function activatePlacement() {
+        placing = true;
+        alert("Clique sur la carte pour ajouter l'objet");
+      }
+
+      function updateObjectList() {
+        const objectListItems = document.getElementById("objectListItems");
+        objectListItems.innerHTML = '';
+        points.forEach((point, index) => {
+          const li = document.createElement("li");
+          const bubbleTextDisplay = point.bubbleText || point.name;
+          const linkDisplay = point.link ? `Lien: ${point.link}` : 'Aucun lien';
+          const videoDisplay = point.video ? `Vidéo: ${point.video}` : 'Aucune vidéo';
+          const imagePopupDisplay = point.imagePopup ? `Image Pop-up: ${point.imagePopup}` : 'Aucune image pop-up';
+          li.innerHTML = `
+            <div>
+              <strong>${point.name}</strong> (Lat: ${point.lat.toFixed(4)}, Lon: ${point.lon.toFixed(4)}, Rayon: ${point.radius}m)<br>
+              Texte bulle: ${bubbleTextDisplay}<br>
+              ${linkDisplay}<br>
+              ${videoDisplay}<br>
+              ${imagePopupDisplay}
+            </div>
+            <button onclick="removeObject(${index})">Supprimer</button>
+          `;
+          objectListItems.appendChild(li);
+        });
+      }
+
+      function removeObject(index) {
+        const point = points[index];
+        // Retirer les éléments de la carte
+        map.removeLayer(point.marker);
+        map.removeLayer(point.circle);
+        point.marker.closePopup();
+        // Retirer l'objet de la liste
+        points.splice(index, 1);
+        // Mettre à jour l'affichage
+        updateObjectList();
+        updateOutput();
+      }
+
+      function updateOutput() {
+        const out = document.getElementById("output");
+        const clean = points.map(p => ({
+          name: p.name,
+          bubbleText: p.bubbleText,
+          link: p.link || "",
+          sound: p.sound || "",
+          item: p.item,
+          image: p.image || "",
+          video: p.video || "",
+          imagePopup: p.imagePopup || "",
+          lat: p.lat,
+          lon: p.lon,
+          radius: p.radius
+        }));
+        out.textContent = JSON.stringify(clean, null, 2);
+      }
+
+      function exportJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(document.getElementById("output").textContent);
+        const dl = document.createElement("a");
+        dl.setAttribute("href", dataStr);
+        dl.setAttribute("download", "checkpoints.json");
+        dl.click();
+      }
+
+      function reset() {
+        location.reload();
+      }
+
+      function searchAddress() {
+        const address = document.getElementById("address").value;
+        if (!address.trim()) return;
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            if (data.length === 0) {
+              alert("Adresse non trouvée.");
+              return;
+            }
+            const loc = data[0];
+            const latlng = L.latLng(loc.lat, loc.lon);
+            map.setView(latlng, 17);
+            map.fire("click", { latlng });
+          })
+          .catch(err => {
+            console.error("Erreur API adresse :", err);
+            alert("Erreur lors de la recherche d'adresse.");
+          });
+      }
+
+      function togglePanel() {
+        const form = document.getElementById("form");
+        const objectList = document.getElementById("objectList");
+        const isHidden = form.style.display === "none";
+        form.style.display = isHidden ? "block" : "none";
+        objectList.style.display = isHidden ? "block" : "none";
+        if (isHidden) {
+          const animation = document.getElementById('entry-animation').value;
+          form.style.opacity = "0";
+          setTimeout(() => {
+            form.classList.add(animation);
+          }, 10);
+        }
+      }
+
+      // Enregistrement du Service Worker pour la PWA
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/Treasure-go/sw.js')
+            .then(registration => {
+              console.log('Service Worker enregistré avec succès:', registration);
+            })
+            .catch(err => {
+              console.log('Erreur lors de l\'enregistrement du Service Worker:', err);
+            });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
