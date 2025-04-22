@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body, #map { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+    #form, #map, #toggleBtn, #output {
+      display: none; /* Masquer par défaut jusqu'à validation du mot de passe */
+    }
     #form {
       position: fixed;
       top: 20px;
@@ -18,7 +21,7 @@
       border-radius: 10px;
       z-index: 1000;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      opacity: 1; /* Assurer que le formulaire est visible par défaut */
+      opacity: 1;
       transition: all 1s ease-in-out;
     }
     #form input, #form button, #form select {
@@ -82,7 +85,6 @@
       border-top: 1px solid #ccc;
       z-index: 500;
     }
-    /* Style pour la bulle */
     .speech-bubble {
       position: absolute;
       background: #fff;
@@ -111,6 +113,22 @@
       opacity: 1;
       transform: scale(1);
     }
+    .bounce-in {
+      animation: bounceIn 1s ease-in-out;
+    }
+    .rotate-in {
+      animation: rotateIn 1s ease-in-out;
+    }
+    @keyframes bounceIn {
+      0% { transform: translateY(-100px); opacity: 0; }
+      60% { transform: translateY(20px); opacity: 1; }
+      80% { transform: translateY(-10px); }
+      100% { transform: translateY(0); }
+    }
+    @keyframes rotateIn {
+      0% { transform: rotate(-180deg); opacity: 0; }
+      100% { transform: rotate(0deg); opacity: 1; }
+    }
     @media (max-width: 600px) {
       #form {
         width: calc(100% - 20px);
@@ -119,11 +137,62 @@
         top: 10px;
       }
     }
+    /* Style pour la boîte de mot de passe */
+    #passwordPrompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+    }
+    #passwordPrompt div {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    #passwordPrompt input {
+      padding: 8px;
+      margin: 10px 0;
+      width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #passwordPrompt button {
+      padding: 8px 16px;
+      background: #000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #passwordPrompt p {
+      color: red;
+      margin: 5px 0 0 0;
+      display: none;
+    }
   </style>
 </head>
 <body>
+  <!-- Boîte de dialogue pour le mot de passe -->
+  <div id="passwordPrompt">
+    <div>
+      <h2>Connexion Admin</h2>
+      <input type="password" id="passwordInput" placeholder="Entrez le mot de passe" />
+      <button onclick="checkPassword()">Valider</button>
+      <p id="errorMessage">Mot de passe incorrect !</p>
+    </div>
+  </div>
+
   <div id="form">
-    <input type="text" id="name" placeholder="Nom de l'objet (texte bulle)" />
+    <input type="text" id="name" placeholder="Nom de l'objet" />
+    <input type="text" id="bubble-text" placeholder="💬 Texte de la bulle" />
     <input type="text" id="link" placeholder="🔗 Lien (URL, facultatif)" />
     <input type="text" id="sound" placeholder="🎵 URL du son (facultatif)" />
     <input type="text" id="image" placeholder="🖼️ URL image perso (facultatif)" />
@@ -132,12 +201,13 @@
     <button onclick="searchAddress()">📍 Rechercher + placer</button>
     <div class="icon-preview" id="iconList"></div>
     <button onclick="activatePlacement()">🎯 Placer sur la carte</button>
-    <!-- Sélection de l'animation d'entrée -->
     <label for="entry-animation">Animation d'entrée</label>
     <select id="entry-animation">
       <option value="fade-in">Fade In</option>
       <option value="slide-in">Slide In</option>
       <option value="zoom-in">Zoom In</option>
+      <option value="bounce-in">Bounce In</option>
+      <option value="rotate-in">Rotate In</option>
     </select>
     <button onclick="exportJSON()">📤 Exporter JSON</button>
     <button onclick="reset()">🗑️ Réinitialiser</button>
@@ -148,6 +218,37 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // Mot de passe statique (à changer selon tes besoins)
+    const ADMIN_PASSWORD = "admin123";
+
+    // Vérifier le mot de passe
+    function checkPassword() {
+      const input = document.getElementById("passwordInput").value;
+      const errorMessage = document.getElementById("errorMessage");
+      const prompt = document.getElementById("passwordPrompt");
+
+      if (input === ADMIN_PASSWORD) {
+        prompt.style.display = "none";
+        document.getElementById("form").style.display = "block";
+        document.getElementById("map").style.display = "block";
+        document.getElementById("toggleBtn").style.display = "block";
+        document.getElementById("output").style.display = "block";
+
+        const animation = document.getElementById('entry-animation').value;
+        const form = document.getElementById('form');
+        form.classList.add(animation);
+      } else {
+        errorMessage.style.display = "block";
+        document.getElementById("passwordInput").value = "";
+      }
+    }
+
+    document.getElementById("passwordInput").addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        checkPassword();
+      }
+    });
+
     const cdnIcons = {
       coffre: "https://cdn-icons-png.flaticon.com/64/4365/4365931.png",
       cle_doree: "https://cdn-icons-png.flaticon.com/64/3176/3176295.png",
@@ -186,14 +287,6 @@
     const points = [];
     let placing = false;
 
-    // Appliquer l'animation d'entrée au chargement
-    document.addEventListener("DOMContentLoaded", function() {
-      const animation = document.getElementById('entry-animation').value;
-      const form = document.getElementById('form');
-      form.style.display = "block"; // Assurer que le formulaire est visible
-      form.classList.add(animation);
-    });
-
     function activatePlacement() {
       placing = true;
       alert("Clique sur la carte pour ajouter l'objet");
@@ -202,6 +295,7 @@
     map.on("click", (e) => {
       if (!placing) return;
       const name = document.getElementById("name").value.trim();
+      const bubbleText = document.getElementById("bubble-text").value.trim();
       const link = document.getElementById("link").value.trim();
       const sound = document.getElementById("sound").value.trim();
       const image = document.getElementById("image").value.trim();
@@ -215,10 +309,9 @@
       const marker = L.marker(e.latlng, { draggable: true, icon }).addTo(map);
       const circle = L.circle(e.latlng, { radius, color: 'blue', fillOpacity: 0.1 }).addTo(map);
 
-      // Ajouter une bulle personnalisée
       const bubble = L.divIcon({
         className: 'speech-bubble',
-        html: `<div class="speech-bubble" id="bubble-${e.latlng.lat}-${e.latlng.lng}">${name}${link ? ` <a href="${link}" target="_blank">Cliquez ici</a>` : ''}</div>`,
+        html: `<div class="speech-bubble" id="bubble-${e.latlng.lat}-${e.latlng.lng}">${bubbleText || name}${link ? ` <a href="${link}" target="_blank">Cliquez ici</a>` : ''}</div>`,
         iconSize: [0, 0]
       });
       const bubbleMarker = L.marker(e.latlng, { icon: bubble }).addTo(map);
@@ -226,6 +319,7 @@
       marker.bindPopup(`<b>${name}</b><br>${selectedIcon}`).openPopup();
       const obj = {
         name,
+        bubbleText: bubbleText || name,
         link,
         sound,
         item: selectedIcon,
@@ -238,17 +332,13 @@
         bubbleMarker
       };
 
-      // Ajouter un événement de clic pour jouer le son et afficher la bulle
       marker.on("click", () => {
-        // Jouer le son si disponible
         if (sound) {
           const audio = new Audio(sound);
           audio.play().catch(err => console.log('Erreur lecture audio:', err));
         }
-        // Afficher la bulle
         const bubbleElement = document.getElementById(`bubble-${e.latlng.lat}-${e.latlng.lng}`);
         bubbleElement.style.display = 'block';
-        // Cacher la bulle après 5 secondes
         setTimeout(() => {
           bubbleElement.style.display = 'none';
         }, 5000);
@@ -271,6 +361,7 @@
       const out = document.getElementById("output");
       const clean = points.map(p => ({
         name: p.name,
+        bubbleText: p.bubbleText,
         link: p.link || "",
         sound: p.sound || "",
         item: p.item,
@@ -322,10 +413,10 @@
       form.style.display = isHidden ? "block" : "none";
       if (isHidden) {
         const animation = document.getElementById('entry-animation').value;
-        form.style.opacity = "0"; // Réinitialiser l'opacité pour l'animation
+        form.style.opacity = "0";
         setTimeout(() => {
           form.classList.add(animation);
-        }, 10); // Petit délai pour s'assurer que l'animation se déclenche
+        }, 10);
       }
     }
   </script>
