@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Treasure-Go (avec rayon)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; font-family: Arial, sans-serif; }
+    #form {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      max-width: 90%;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 10px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      opacity: 0; /* Pour l'animation d'entrée */
+      transition: all 1s ease-in-out;
+    }
+    #form input, #form button, #form select {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      padding: 8px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    #form button {
+      background: #000;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .icon-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .icon-preview img {
+      width: 40px;
+      height: 40px;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .icon-preview img.selected {
+      border-color: #000;
+    }
+    #toggleBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+      background: #000;
+      color: white;
+      font-size: 20px;
+      border: none;
+      z-index: 2000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+    #output {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 150px;
+      overflow: auto;
+      background: #f4f4f4;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 12px;
+      border-top: 1px solid #ccc;
+      z-index: 500;
+    }
+    /* Style pour la bulle */
+    .speech-bubble {
+      position: absolute;
+      background: #fff;
+      border: 2px solid #000;
+      border-radius: 10px;
+      padding: 10px;
+      display: none;
+      z-index: 1000;
+      max-width: 200px;
+      text-align: center;
+      transform: translate(-50%, -100%);
+    }
+    .speech-bubble a {
+      color: #1a73e8;
+      text-decoration: underline;
+    }
+    /* Animations d'entrée */
+    .fade-in {
+      opacity: 1;
+    }
+    .slide-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .zoom-in {
+      opacity: 1;
+      transform: scale(1);
+    }
+    @media (max-width: 600px) {
+      #form {
+        width: calc(100% - 20px);
+        left: 10px;
+        right: 10px;
+        top: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="form" style="transform: translateY(50px);">
+    <input type="text" id="name" placeholder="Nom de l'objet (texte bulle)" />
+    <input type="text" id="link" placeholder="🔗 Lien (URL, facultatif)" />
+    <input type="text" id="sound" placeholder="🎵 URL du son (facultatif)" />
+    <input type="text" id="image" placeholder="🖼️ URL image perso (facultatif)" />
+    <input type="number" id="radius" placeholder="Rayon (en mètres)" />
+    <input type="text" id="address" placeholder="🔎 Adresse ou lieu" />
+    <button onclick="searchAddress()">📍 Rechercher + placer</button>
+    <div class="icon-preview" id="iconList"></div>
+    <button onclick="activatePlacement()">🎯 Placer sur la carte</button>
+    <!-- Sélection de l'animation d'entrée -->
+    <label for="entry-animation">Animation d'entrée</label>
+    <select id="entry-animation">
+      <option value="fade-in">Fade In</option>
+      <option value="slide-in">Slide In</option>
+      <option value="zoom-in">Zoom In</option>
+    </select>
+    <button onclick="exportJSON()">📤 Exporter JSON</button>
+    <button onclick="reset()">🗑️ Réinitialiser</button>
+  </div>
+  <div id="map"></div>
+  <button onclick="togglePanel()" id="toggleBtn">🧭</button>
+  <div id="output"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const cdnIcons = {
+      coffre: "https://cdn-icons-png.flaticon.com/64/4365/4365931.png",
+      cle_doree: "https://cdn-icons-png.flaticon.com/64/3176/3176295.png",
+      pierre_rouge: "https://audio-guides.eu/treasure/pirate.png",
+      carte: "https://cdn-icons-png.flaticon.com/64/3541/3541885.png",
+      epee: "https://cdn-icons-png.flaticon.com/64/3468/3468091.png",
+      potion: "https://cdn-icons-png.flaticon.com/64/3063/3063829.png",
+      diamant: "https://cdn-icons-png.flaticon.com/64/951/951195.png",
+      piece_or: "https://cdn-icons-png.flaticon.com/64/4365/4365962.png",
+      couronne: "https://cdn-icons-png.flaticon.com/64/3534/3534254.png",
+      champagne: "https://cdn-icons-png.flaticon.com/64/2829/2829032.png",
+      bateau_pirate: "https://cdn-icons-png.flaticon.com/64/4365/4365913.png"
+    };
+    const icons = Object.keys(cdnIcons);
+    let selectedIcon = "coffre";
+
+    const iconList = document.getElementById("iconList");
+    icons.forEach(name => {
+      const img = document.createElement("img");
+      img.src = cdnIcons[name];
+      img.title = name;
+      img.onclick = () => {
+        document.querySelectorAll(".icon-preview img").forEach(i => i.classList.remove("selected"));
+        img.classList.add("selected");
+        selectedIcon = name;
+      };
+      if (name === "coffre") img.classList.add("selected");
+      iconList.appendChild(img);
+    });
+
+    const map = L.map('map').setView([43.695, 7.255], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    const points = [];
+    let placing = false;
+
+    // Appliquer l'animation d'entrée au chargement
+    window.onload = function() {
+      const animation = document.getElementById('entry-animation').value;
+      const form = document.getElementById('form');
+      form.classList.add(animation);
+    };
+
+    function activatePlacement() {
+      placing = true;
+      alert("Clique sur la carte pour ajouter l'objet");
+    }
+
+    map.on("click", (e) => {
+      if (!placing) return;
+      const name = document.getElementById("name").value.trim();
+      const link = document.getElementById("link").value.trim();
+      const sound = document.getElementById("sound").value.trim();
+      const image = document.getElementById("image").value.trim();
+      const radius = parseInt(document.getElementById("radius").value.trim()) || 50;
+      if (!name) return alert("Donne un nom à ton objet !");
+      const icon = L.icon({
+        iconUrl: cdnIcons[selectedIcon],
+        iconSize: [48, 48],
+        iconAnchor: [24, 48]
+      });
+      const marker = L.marker(e.latlng, { draggable: true, icon }).addTo(map);
+      const circle = L.circle(e.latlng, { radius, color: 'blue', fillOpacity: 0.1 }).addTo(map);
+
+      // Ajouter une bulle personnalisée
+      const bubble = L.divIcon({
+        className: 'speech-bubble',
+        html: `<div class="speech-bubble" id="bubble-${e.latlng.lat}-${e.latlng.lng}">${name}${link ? ` <a href="${link}" target="_blank">Cliquez ici</a>` : ''}</div>`,
+        iconSize: [0, 0]
+      });
+      const bubbleMarker = L.marker(e.latlng, { icon: bubble }).addTo(map);
+
+      marker.bindPopup(`<b>${name}</b><br>${selectedIcon}`).openPopup();
+      const obj = {
+        name,
+        link,
+        sound,
+        item: selectedIcon,
+        image,
+        radius,
+        lat: e.latlng.lat,
+        lon: e.latlng.lng,
+        marker,
+        circle,
+        bubbleMarker
+      };
+
+      // Ajouter un événement de clic pour jouer le son et afficher la bulle
+      marker.on("click", () => {
+        // Jouer le son si disponible
+        if (sound) {
+          const audio = new Audio(sound);
+          audio.play().catch(err => console.log('Erreur lecture audio:', err));
+        }
+        // Afficher la bulle
+        const bubbleElement = document.getElementById(`bubble-${e.latlng.lat}-${e.latlng.lng}`);
+        bubbleElement.style.display = 'block';
+        // Cacher la bulle après 5 secondes
+        setTimeout(() => {
+          bubbleElement.style.display = 'none';
+        }, 5000);
+      });
+
+      marker.on("dragend", () => {
+        const pos = marker.getLatLng();
+        obj.lat = pos.lat;
+        obj.lon = pos.lng;
+        obj.circle.setLatLng(pos);
+        obj.bubbleMarker.setLatLng(pos);
+        updateOutput();
+      });
+      points.push(obj);
+      updateOutput();
+      placing = false;
+    });
+
+    function updateOutput() {
+      const out = document.getElementById("output");
+      const clean = points.map(p => ({
+        name: p.name,
+        link: p.link || "",
+        sound: p.sound || "",
+        item: p.item,
+        image: p.image || "",
+        lat: p.lat,
+        lon: p.lon,
+        radius: p.radius
+      }));
+      out.textContent = JSON.stringify(clean, null, 2);
+    }
+
+    function exportJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(document.getElementById("output").textContent);
+      const dl = document.createElement("a");
+      dl.setAttribute("href", dataStr);
+      dl.setAttribute("download", "checkpoints.json");
+      dl.click();
+    }
+
+    function reset() {
+      location.reload();
+    }
+
+    function searchAddress() {
+      const address = document.getElementById("address").value;
+      if (!address.trim()) return;
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          if (data.length === 0) {
+            alert("Adresse non trouvée.");
+            return;
+          }
+          const loc = data[0];
+          const latlng = L.latLng(loc.lat, loc.lon);
+          map.setView(latlng, 17);
+          map.fire("click", { latlng });
+        })
+        .catch(err => {
+          console.error("Erreur API adresse :", err);
+          alert("Erreur lors de la recherche d'adresse.");
+        });
+    }
+
+    function togglePanel() {
+      const form = document.getElementById("form");
+      form.style.display = form.style.display === "none" ? "block" : "none";
+      if (form.style.display === "block") {
+        const animation = document.getElementById('entry-animation').value;
+        form.classList.add(animation);
+      }
+    }
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93435c23aa296782',t:'MTc0NTMwNjQ0MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>
